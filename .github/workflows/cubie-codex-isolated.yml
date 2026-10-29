@@ -1,0 +1,80 @@
+# DRAFT ONLY — not active until separately approved and merged.
+# GitHub's codex-action uses its own API key; no Codex Cloud environment required.
+# Starts only when an authorized task request is committed on a codex-task/* branch.
+name: Cubie - isolated Codex candidate
+on:
+  push:
+    branches:
+      - 'codex-task/**'
+    paths:
+      - 'tasks/codex_request.md'
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out request and locked baseline
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check prerequisites and build isolated workspace
+        env:
+          CODEX_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$CODEX_API_KEY" ]; then
+            echo "::error::Missing OPENAI_API_KEY GitHub Actions secret; no Codex task was started."
+            exit 1
+          fi
+          test -s tasks/codex_request.md
+          test -s baseline/Cubie_A7A_05mm_faasid_osaline.html
+          mkdir -p "$RUNNER_TEMP/cubie-isolated/candidates" "$RUNNER_TEMP/cubie-isolated/reports"
+          cp baseline/Cubie_A7A_05mm_faasid_osaline.html "$RUNNER_TEMP/cubie-isolated/"
+          sha256sum baseline/Cubie_A7A_05mm_faasid_osaline.html | cut -d' ' -f1 > "$RUNNER_TEMP/cubie-isolated/reports/baseline_sha256.txt"
+
+      - name: Ask Codex to prepare candidate only
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          permission-profile: ':workspace'
+          working-directory: ${{ runner.temp }}/cubie-isolated
+          prompt-file: tasks/codex_request.md
+          output-file: ${{ runner.temp }}/cubie-isolated/reports/codex_response.md
+
+      - name: Reject changes outside the requested candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, os, pathlib, sys
+          root = pathlib.Path(os.environ["RUNNER_TEMP"]) / "cubie-isolated"
+          baseline = root / "Cubie_A7A_05mm_faasid_osaline.html"
+          original = (root / "reports" / "baseline_sha256.txt").read_text().strip()
+          actual = hashlib.sha256(baseline.read_bytes()).hexdigest()
+          if actual != original:
+              sys.exit("FAIL: Codex modified locked baseline; candidate rejected")
+          for path in root.rglob("*"):
+              relative = path.relative_to(root)
+              if path.is_symlink():
+                  sys.exit("FAIL: symlinks are not permitted: " + str(relative))
+              if relative.parts[0] not in ("candidates", "reports") and relative.name != baseline.name:
+                  sys.exit("FAIL: unexpected output: " + str(relative))
+          (root / "reports" / "validation.txt").write_text("PASS: locked baseline SHA-256 matches; no files outside candidates/reports.\n")
+          PY
+
+      - name: Preserve Codex candidate for independent review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cubie-codex-candidate-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/cubie-isolated/candidates/
+            ${{ runner.temp }}/cubie-isolated/reports/
+          if-no-files-found: warn
+          retention-days: 30
