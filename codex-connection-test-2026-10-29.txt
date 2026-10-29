@@ -1,0 +1,1 @@
+Connectivity test only. No CAD, SCAD, HTML, or existing repository files may be edited.
