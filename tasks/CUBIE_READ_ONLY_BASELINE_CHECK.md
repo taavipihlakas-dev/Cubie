@@ -7,7 +7,7 @@ The user must approve every geometric change before implementation and approve t
 ## Only user-designated baseline
 File name: `Cubie_A7A_05mm_faasid_osaline.html`
 SHA-256: `661666f196459ec15edce3b1fe39cd552ce4a25dd7212a606bf7cf77d3bdbe91`
-Actual baseline location: **NOT YET PRESENT IN THIS BRANCH**.
+Actual baseline location: `baseline/Cubie_A7A_05mm_faasid_osaline.html` (verified 2026-10-30: 5,527,796 bytes; SHA-256 `661666f196459ec15edce3b1fe39cd552ce4a25dd7212a606bf7cf77d3bdbe91`).
 Do not use or infer a substitute from `Cubie_v48_32_3D.html`, `Cubie_v48_33_3D.html`, repository history, generated STL, or any other file. Those are locked.
 
 ## Preparatory assignment for Codex (READ ONLY)
