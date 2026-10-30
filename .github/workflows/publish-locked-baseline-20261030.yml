@@ -1,0 +1,52 @@
+name: Publish exact verified Cubie A7A locked baseline
+on:
+  push:
+    branches:
+      - codex/locked-baseline-release-20261030
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pinned, verified baseline commit
+        uses: actions/checkout@v4
+        with:
+          ref: 50634798cafbcca28c56db08caeb34f41d3e4cea
+          persist-credentials: false
+      - name: Verify exact bytes and publish unchanged HTML asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="baseline/Cubie_A7A_05mm_faasid_osaline.html"
+          NAME="Cubie_A7A_05mm_faasid_osaline.html"
+          TAG="cubie-a7a-locked-baseline-20261030"
+          SHA="50634798cafbcca28c56db08caeb34f41d3e4cea"
+          EXPECTED="661666f196459ec15edce3b1fe39cd552ce4a25dd7212a606bf7cf77d3bdbe91"
+          test "$(git rev-parse HEAD)" = "$SHA"
+          test "$(git status --porcelain)" = ""
+          test -f "$FILE"
+          test "$(wc -c < "$FILE" | tr -d ' ')" = "5527796"
+          printf '%s  %s\n' "$EXPECTED" "$FILE" | sha256sum -c --strict
+          if gh release view "$TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
+            echo "FAIL: tag/release exists; refusing to overwrite"
+            exit 1
+          fi
+          gh release create "$TAG" "$FILE#${NAME}" \
+            --repo "$GH_REPO" \
+            --target "$SHA" \
+            --title "Cubie A7A — locked 0.5 mm chamfer HTML baseline" \
+            --notes "Exact, unchanged, SHA-256 verified baseline. No geometry edits. Asset size: 5,527,796 bytes; SHA-256: $EXPECTED. This is a baseline file, not a newly approved geometry revision." \
+            --prerelease
+          ASSET="$(gh release view "$TAG" --repo "$GH_REPO" --json assets --jq '.assets[] | select(.name=="Cubie_A7A_05mm_faasid_osaline.html") | .url')"
+          test -n "$ASSET"
+          mkdir -p "$RUNNER_TEMP/cubie-verify"
+          gh release download "$TAG" --repo "$GH_REPO" --pattern "$NAME" --dir "$RUNNER_TEMP/cubie-verify"
+          test "$(wc -c < "$RUNNER_TEMP/cubie-verify/$NAME" | tr -d ' ')" = "5527796"
+          printf '%s  %s\n' "$EXPECTED" "$RUNNER_TEMP/cubie-verify/$NAME" | sha256sum -c --strict
+          echo "VERIFIED RELEASE ASSET: $NAME"
+          echo "SHA-256: $EXPECTED"
+          echo "Download: https://github.com/$GH_REPO/releases/download/$TAG/$NAME"
