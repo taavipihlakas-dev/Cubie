@@ -14,7 +14,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment:
-      name: github-pages
+      name: cubie-a7a-preview
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout isolated candidate branch
