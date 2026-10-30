@@ -1,0 +1,53 @@
+name: Cubie A7A Pages preview — verified HTML only
+on:
+  push:
+    branches:
+      - codex/cubie-pages-preview-20261030
+    paths:
+      - .github/workflows/cubie-pages-preview-20261030.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout isolated candidate branch
+        uses: actions/checkout@v4
+      - name: Verify original and candidate, stage only candidate as index.html
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          from shutil import copyfile
+          original=Path('baseline/Cubie_A7A_05mm_faasid_osaline.html')
+          candidate=Path('Cubie_A7A_05mm_faasid_osaline_v01_osad_peidus.html')
+          expected_original='661666f196459ec15edce3b1fe39cd552ce4a25dd7212a606bf7cf77d3bdbe91'
+          expected_candidate='056db2997d1056c3b68d7ad8beb7d9872dd47be79d18439f637749787c9d6501'
+          for f,expected in ((original,expected_original),(candidate,expected_candidate)):
+              raw=f.read_bytes()
+              assert sha256(raw).hexdigest()==expected, str(f)+' SHA-256 mismatch'
+          assert candidate.stat().st_size==5528023
+          out=Path('_site')
+          out.mkdir(exist_ok=False)
+          copyfile(candidate, out/'index.html')
+          assert sha256((out/'index.html').read_bytes()).hexdigest()==expected_candidate
+          assert [p.name for p in out.iterdir()]==['index.html']
+          print('VERIFIED: single published HTML candidate, SHA-256:',expected_candidate)
+          PY
+      - name: Configure GitHub Pages (must already be enabled)
+        uses: actions/configure-pages@v5
+      - name: Upload only verified HTML
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./_site
+      - name: Deploy GitHub Pages
+        uses: actions/deploy-pages@v4
+        id: deployment
