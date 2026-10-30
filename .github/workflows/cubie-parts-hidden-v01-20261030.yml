@@ -27,7 +27,7 @@ jobs:
           candidate="056db2997d1056c3b68d7ad8beb7d9872dd47be79d18439f637749787c9d6501"
           data=src.read_bytes()
           assert len(data)==5527796 and hashlib.sha256(data).hexdigest()==expected
-          assert not dst.exists()
+          if dst.exists(): assert dst.read_bytes()==patched
           patches=[
           (b"const initiallyVisible=true;",b"const initiallyVisible=entry.name.startsWith('Konstruktsioon');"),
           (b"document.getElementById('reset').onclick=()=>{orthographic=true;az=0;el=0;distance=fit;panX=0;panY=0;draw();};",b"document.getElementById('reset').onclick=()=>{orthographic=true;az=0;el=0;distance=fit;panX=0;panY=0;for(const g of groups)g.visible=g.isPanel;for(const row of document.querySelectorAll('#items .item')){const g=groups[Number(row.dataset.index)];row.classList.toggle('off',!g.visible);}draw();};"),
@@ -43,22 +43,17 @@ jobs:
               restored=restored.replace(new,old,1)
           assert restored==data
           assert len(patched)==5528023 and hashlib.sha256(patched).hexdigest()==candidate
-          dst.write_bytes(patched)
+          if not dst.exists(): dst.write_bytes(patched)
           print("VERIFIED candidate SHA-256:",candidate)
           print("VERIFIED original unchanged:",expected)
           PY
-          test "$(git status --porcelain | wc -l | tr -d ' ')" = "1"
-          git add Cubie_A7A_05mm_faasid_osaline_v01_osad_peidus.html
-          test "$(git diff --cached --name-only)" = "Cubie_A7A_05mm_faasid_osaline_v01_osad_peidus.html"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Add Cubie locked-baseline-derived candidate with parts hidden initially and on reset"
-          git push origin HEAD:refs/heads/codex/cubie-parts-hidden-v01-20261030
+          test "$(git status --porcelain)" = ""
+          test "$(git ls-files -- Cubie_A7A_05mm_faasid_osaline_v01_osad_peidus.html)" = "Cubie_A7A_05mm_faasid_osaline_v01_osad_peidus.html"
       - name: Publish unchanged candidate as prerelease asset and verify download
         shell: bash
         env:
-          GH_TOKEN: \${{ github.token }}
-          GH_REPO: \${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           TAG="cubie-a7a-v01-osad-peidus-20261030"
