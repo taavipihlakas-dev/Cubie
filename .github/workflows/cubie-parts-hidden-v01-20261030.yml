@@ -27,7 +27,6 @@ jobs:
           candidate="056db2997d1056c3b68d7ad8beb7d9872dd47be79d18439f637749787c9d6501"
           data=src.read_bytes()
           assert len(data)==5527796 and hashlib.sha256(data).hexdigest()==expected
-          if dst.exists(): assert dst.read_bytes()==patched
           patches=[
           (b"const initiallyVisible=true;",b"const initiallyVisible=entry.name.startsWith('Konstruktsioon');"),
           (b"document.getElementById('reset').onclick=()=>{orthographic=true;az=0;el=0;distance=fit;panX=0;panY=0;draw();};",b"document.getElementById('reset').onclick=()=>{orthographic=true;az=0;el=0;distance=fit;panX=0;panY=0;for(const g of groups)g.visible=g.isPanel;for(const row of document.querySelectorAll('#items .item')){const g=groups[Number(row.dataset.index)];row.classList.toggle('off',!g.visible);}draw();};"),
@@ -43,7 +42,8 @@ jobs:
               restored=restored.replace(new,old,1)
           assert restored==data
           assert len(patched)==5528023 and hashlib.sha256(patched).hexdigest()==candidate
-          if not dst.exists(): dst.write_bytes(patched)
+          if dst.exists(): assert dst.read_bytes()==patched
+          else: dst.write_bytes(patched)
           print("VERIFIED candidate SHA-256:",candidate)
           print("VERIFIED original unchanged:",expected)
           PY
