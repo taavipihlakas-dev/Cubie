@@ -1,0 +1,32 @@
+name: Restore verified Cubie A7A baseline
+on:
+  push:
+    branches:
+      - codex/baseline-restore-run-20261030
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact target branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/cubie-locked-baseline-20261029
+          fetch-depth: 1
+      - name: Verify branch unchanged and assemble locked baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "74408dbc7710c4260ed2bfbd911c103b0a4c2fee"
+          test ! -e baseline/Cubie_A7A_05mm_faasid_osaline.html
+          python3 baseline/reconstruct_locked.py
+          test "$(stat -c %s baseline/Cubie_A7A_05mm_faasid_osaline.html)" = "5527796"
+          printf '661666f196459ec15edce3b1fe39cd552ce4a25dd7212a606bf7cf77d3bdbe91  baseline/Cubie_A7A_05mm_faasid_osaline.html\n' | sha256sum --check --strict
+          test "$(git status --porcelain | wc -l | tr -d ' ')" = "1"
+          git add -- baseline/Cubie_A7A_05mm_faasid_osaline.html
+          test "$(git diff --cached --name-only)" = "baseline/Cubie_A7A_05mm_faasid_osaline.html"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Restore exact verified locked Cubie A7A baseline"
+          git push origin HEAD:refs/heads/codex/cubie-locked-baseline-20261029
