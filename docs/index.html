@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Garderoob 3D v59</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:Arial,sans-serif}
+#c{width:100%;height:100%;display:block}
+#ui{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;flex-wrap:wrap;justify-content:center}
+button{width:74px;height:74px;border-radius:50%;border:2px solid #0005;font-size:11px;font-weight:700;box-shadow:0 2px 6px #0005}
+#open{background:#66c66a}#close{background:#e85b5b;color:#fff}#reset{background:#f2d25b}#axes{background:#ff6a6a;color:#fff}#dims{background:#5e98ff;color:#fff}
+.off{opacity:.45}
+#info{position:fixed;left:10px;bottom:10px;color:#fff;background:#0008;padding:6px 9px;border-radius:8px;font-size:12px}
+</style>
+</head>
+<body>
+<div id="ui">
+<button id="open">LAHTI</button><button id="close">KINNI</button><button id="reset">RESET</button><button id="axes">TELJESTIK</button><button id="dims">MÕÕDUD</button>
+</div>
+<div id="info">hiir: pööra · rull: zoom · paremklõps: pan</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.min.js"></script>
+<script>
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xececec);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,5000);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));document.body.appendChild(renderer.domElement);
+renderer.domElement.id='c';
+scene.add(new THREE.HemisphereLight(0xffffff,0x333344,2.4));
+const dl=new THREE.DirectionalLight(0xffffff,2.2);dl.position.set(300,400,300);scene.add(dl);
+const root=new THREE.Group();scene.add(root);
+const mat=(c,o=1)=>new THREE.MeshStandardMaterial({color:c,roughness:.72,metalness:.05,transparent:o<1,opacity:o,side:THREE.DoubleSide,depthWrite:o>.98});
+const wall=mat(0xb8b8b3),black=mat(0x101014),blue=mat(0x335fdc),orange=mat(0xef851f),green=mat(0x2d9d44),red=mat(0x75101a),leather=mat(0x17171a),chrome=new THREE.MeshStandardMaterial({color:0x9fa5ad,metalness:.8,roughness:.25});
+function box(x1,x2,y1,y2,z1,z2,m,parent=root){const g=new THREE.BoxGeometry(x2-x1,y2-y1,z2-z1);const o=new THREE.Mesh(g,m);o.position.set((x1+x2)/2,(y1+y2)/2,(z1+z2)/2);parent.add(o);return o}
+function cylY(x,z,y1,y2,r,m,parent=root){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,y2-y1,18),m);o.position.set(x,(y1+y2)/2,z);parent.add(o);return o}
+function quad(a,b,c,d,m,parent=root){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute([...a,...b,...c,...a,...c,...d],3));g.computeVertexNormals();const o=new THREE.Mesh(g,m);parent.add(o);return o}
+// main room shell
+box(-20,400,0,23,-40,0,wall);box(-20,400,208,247,-40,0,wall);box(-20,88,23,208,-40,0,wall);box(153,400,23,208,-40,0,wall);
+box(-20,400,0,15,160,169,mat(0xb8b8b3,.22));box(-20,0,0,15,0,160,mat(0xb8b8b3,.22));
+// floor
+box(0,400,-1,0,0,160,mat(0x5c5048));
+// baseboards
+box(0,400,0,15,0,2.2,black);box(-2.2,0,0,15,0,160,black);box(0,400,0,15,158,160,black);
+// orange unit
+const orangeG=new THREE.Group();root.add(orangeG);box(14.5,16,23,208,1.5,15,orange,orangeG);box(86.5,88,23,208,1.5,15,orange,orangeG);box(14.5,88,23,24.5,1.5,15,orange,orangeG);box(14.5,88,206.5,208,1.5,15,orange,orangeG);
+for(let y=48;y<196;y+=24)box(16,86.5,y,y+1.5,3,15,mat(0xffa846),orangeG);
+// green unit
+const greenG=new THREE.Group();root.add(greenG);box(88,89.5,23,208,-40,30,green,greenG);box(146.5,148,23,208,-40,30,green,greenG);box(88,148,23,24.5,-40,30,green,greenG);box(88,148,206.5,208,-40,30,green,greenG);
+// black cabinet
+box(155,156.5,0,110,0,30,black);box(323.5,325,0,110,0,30,black);box(155,325,108.5,110,0,30,black);box(155,325,35.16,36.66,0,30,black);box(155,325,71.83,73.33,0,30,black);
+// small room dimensions x=3..248, z=-176..-40
+box(3,248,-1,0,-176,-40,mat(0x5c5048));
+box(3,248,0,100,-176,-174.5,red);box(3,4.5,0,100,-176,-40,red);box(246.5,248,0,100,-176,-40,red);
+const clear=mat(0xbfc9d7,.18);quad([3,100,-176],[248,100,-176],[248,236,-40],[3,236,-40],clear);quad([3,100,-176],[3,236,-40],[3,100,-40],[3,100,-176],clear);quad([248,100,-40],[248,236,-40],[248,100,-176],[248,100,-40],clear);
+// baseboards small room
+box(3,248,0,15,-176,-174,black);box(3,5,0,15,-176,-40,black);box(246,248,0,15,-176,-40,black);box(3,88,0,15,-42,-40,black);box(153,248,0,15,-42,-40,black);
+// 200x120 adult bed
+box(24,224,15,30,-170,-50,leather);box(28,220,30,47,-166,-54,red);box(20,228,30,118,-176,-168,leather);
+for(const x of [34,214])for(const z of [-160,-60]){box(x-2,x+2,15,102,z-2,z+2,black);cylY(x,z,96,103,2.6,chrome)}
+box(60,68,47,49,-164,-56,leather);box(180,188,47,49,-164,-56,leather);box(28,220,47,49,-115,-107,leather);
+// diagonal cross on east wall
+quad([246.2,18,-168],[246.2,26,-172],[246.2,224,-52],[246.2,216,-48],mat(0x3b1d0d));quad([246,72,-152],[246,80,-156],[246,178,-96],[246,170,-92],mat(0x3b1d0d));quad([246,72,-88],[246,80,-84],[246,178,-144],[246,170,-148],mat(0x3b1d0d));
+// bench
+box(176,228,12,42,-138,-106,leather);box(172,232,42,52,-140,-104,red);
+// axes + labels
+const axesH=new THREE.AxesHelper(280);axesH.position.set(0,.3,0);root.add(axesH);
+const labels=[], dims=[];
+function line(a,b,c=0x222222){const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a),new THREE.Vector3(...b)]);const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:c}));root.add(l);dims.push(l)}
+function label(txt,p){const d=document.createElement('div');d.textContent=txt;d.style='position:fixed;color:#111;background:#ffffffe6;padding:2px 4px;border-radius:3px;font:12px Arial;pointer-events:none;z-index:6';document.body.appendChild(d);labels.push({d,p:new THREE.Vector3(...p)})}
+line([3,5,-176],[248,5,-176]);label('2450 mm',[125,7,-176]);line([248,5,-176],[248,5,-40]);label('1360 mm',[248,7,-108]);line([3,0,-176],[3,100,-176]);label('1000 mm',[3,50,-176]);line([248,0,-40],[248,236,-40]);label('2360 mm',[248,118,-40]);line([88,2,-40],[153,2,-40]);label('650 mm',[120,5,-40]);
+let yaw=-2.55,pitch=.23,dist=520,target=new THREE.Vector3(120,90,-75),panX=0,panY=0;
+function resetCam(){yaw=-2.55;pitch=.23;dist=520;target.set(120,90,-75);panX=panY=0;updateCam()}
+function updateCam(){camera.position.set(target.x+dist*Math.sin(yaw)*Math.cos(pitch),target.y+dist*Math.sin(pitch),target.z+dist*Math.cos(yaw)*Math.cos(pitch));camera.lookAt(target)}
+resetCam();
+let drag=false,lastX=0,lastY=0,button=0;
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;button=e.button;lastX=e.clientX;lastY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointerup',()=>drag=false);
+renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
+renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;if(button===2||e.shiftKey){const s=dist/700;target.x-=dx*s*Math.cos(yaw);target.z+=dx*s*Math.sin(yaw);target.y+=dy*s}else{yaw-=dx*.006;pitch=Math.max(-1.45,Math.min(1.45,pitch+dy*.006))}updateCam()});
+renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(120,Math.min(1400,dist*Math.exp(e.deltaY*.001)));updateCam()},{passive:false});
+let axesOn=true,dimsOn=true;
+axes.onclick=()=>{axesOn=!axesOn;axesH.visible=axesOn;axes.classList.toggle('off',!axesOn)};
+dims.onclick=()=>{dimsOn=!dimsOn;dims.forEach(x=>x.visible=dimsOn);labels.forEach(x=>x.d.style.display=dimsOn?'block':'none');dims.classList.toggle('off',!dimsOn)};
+reset.onclick=resetCam;
+function tween(obj,to,dur){const from=obj.userData.t||0,start=performance.now();function f(now){let p=Math.min(1,(now-start)/dur);p=p*p*(3-2*p);const t=from+(to-from)*p;obj.userData.t=t;if(obj===orangeG){obj.rotation.y=t*Math.PI/2;obj.position.x=15.3;obj.position.z=14.2}else{obj.position.z=t*41.5;obj.position.x=t>0.5?-60*(t-.5)/.5:0}if(p<1)requestAnimationFrame(f)}requestAnimationFrame(f)}
+open.onclick=()=>{tween(orangeG,1,1600);setTimeout(()=>tween(greenG,1,1600),800)};
+close.onclick=()=>{tween(greenG,0,1600);setTimeout(()=>tween(orangeG,0,1200),800)};
+function render(){requestAnimationFrame(render);renderer.render(scene,camera);for(const L of labels){const v=L.p.clone().project(camera);L.d.style.left=((v.x*.5+.5)*innerWidth)+'px';L.d.style.top=((-v.y*.5+.5)*innerHeight)+'px';L.d.style.transform='translate(-50%,-50%)';L.d.style.display=dimsOn&&(v.z>-1&&v.z<1)?'block':'none'}}render();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body></html>
