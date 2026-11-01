@@ -2,7 +2,7 @@ name: Cubie rebuild from locked baseline - geometry diagnostic
 on:
   push:
     branches: [codex/cubie-geometry-rebuild-20261101]
-    paths: [.github/workflows/cubie-rebuild-front.yml]
+    paths: [.github/workflows/cubie-rebuild-front.yml, tools/cubie_rebuild_front.py]
 permissions:
   contents: read
 jobs:
