@@ -1,0 +1,29 @@
+name: Cubie C0.5 concave edge physical addition probe - no publishing
+on:
+  push:
+    branches: [codex/cubie-geometry-rebuild-20261101]
+    paths: [.github/workflows/cubie-concave-probe.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch source-derived, front-corrected baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/cubie_chamfer
+          gh run download 41343198810 --repo taavipihlakas-dev/Cubie --name cubie-original-only-front-cutter-inspection --dir /tmp/cubie_chamfer
+      - name: Test 0.5 mm internal chamfer construction without moving any holes
+        run: |
+          python -m pip install --quiet numpy trimesh manifold3d==3.5.4
+          python -u tools/cubie_concave_probe.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: concave-chamfer-probe
+          path: cubie_concave_structural_probe.stl
+          if-no-files-found: warn
