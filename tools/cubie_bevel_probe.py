@@ -31,7 +31,7 @@ boundary=[e for e in bm.edges if not e.is_manifold]
 print("BEVEL_EDGES_NOT_MANIFOLD",len(boundary),flush=True)
 assert not boundary
 bmesh.ops.triangulate(bm,faces=list(bm.faces),quad_method='BEAUTY',ngon_method='BEAUTY')
-bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=1e-5)
+# Do not weld newly constructed 0.5-mm bevel edges; welding opened 8 seams.
 print("AFTER_TRIANGULATE",len(bm.faces),len([e for e in bm.edges if not e.is_manifold]),flush=True)
 assert all(e.is_manifold for e in bm.edges)
 bm.to_mesh(obj.data)
