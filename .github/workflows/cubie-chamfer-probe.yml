@@ -1,0 +1,29 @@
+name: Cubie exact C0.5 geometric chamfer cutter trial - no publishing
+on:
+  push:
+    branches: [codex/cubie-geometry-rebuild-20261101]
+    paths: [.github/workflows/cubie-chamfer-probe.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  prototype:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download original-derived front-corrected mesh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/cubie_chamfer
+          gh run download 41343198810 --repo taavipihlakas-dev/Cubie --name cubie-original-only-front-cutter-inspection --dir /tmp/cubie_chamfer
+      - name: Construct physical 0.5 mm bevel as robust solid cut
+        run: |
+          python -m pip install --quiet numpy trimesh manifold3d==3.5.4
+          python -u tools/cubie_chamfer_probe.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: structural-chamfer-probe
+          path: cubie_chamfer_structural_subset.stl
+          if-no-files-found: warn
