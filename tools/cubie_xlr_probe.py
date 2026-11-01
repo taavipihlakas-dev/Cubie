@@ -25,7 +25,31 @@ print("XLR_MANIFOLD_IN",old.status(),old.num_tri(),flush=True)
 # Close old Ø23.8-mm bore only in the 0..28 mm front/back aperture,
 # cutting its replacement with matching cylindrical radius.
 fill=cyl(X,Y,12.02,-0.01,28.1)
-newbore=cyl(X+dx,Y+dy,11.9,-.02,28.12)
+# Precisely preserve the existing small front lip: inner bore Ø23.8 until
+# z27.5, then a half-millimeter radial taper to Ø22.8 at the front face.
+def bore_with_front_lip(cx,cy,n=256):
+    angles=np.linspace(0,2*np.pi,n,endpoint=False)
+    rings=[(-.02,11.9),(27.5,11.9),(28.0,11.4),(28.12,11.4)]
+    vertices=np.array([[cx+r*np.cos(t),cy+r*np.sin(t),z]
+        for z,r in rings for t in angles],dtype=np.float64)
+    vertices=np.vstack([vertices,[cx,cy,rings[0][0]],[cx,cy,rings[-1][0]]])
+    faces=[]
+    for j in range(len(rings)-1):
+        for k in range(n):
+            kk=(k+1)%n
+            a,b,c,d=j*n+k,j*n+kk,(j+1)*n+kk,(j+1)*n+k
+            faces.extend([(a,b,c),(a,c,d)])
+    bottom=len(vertices)-2
+    top=len(vertices)-1
+    for k in range(n):
+        kk=(k+1)%n
+        faces.append((bottom,kk,k))
+        faces.append((top,(len(rings)-1)*n+k,(len(rings)-1)*n+kk))
+    mesh=trimesh.Trimesh(vertices=vertices,faces=faces,process=False)
+    if mesh.volume<0:mesh.invert()
+    assert mesh.is_watertight and mesh.is_winding_consistent
+    return asman(mesh)
+newbore=bore_with_front_lip(X+dx,Y+dy)
 with_fill=old+fill
 print("XLR_AFTER_FILL",with_fill.status(),with_fill.num_tri(),with_fill.volume(),flush=True)
 fixed=with_fill-newbore
