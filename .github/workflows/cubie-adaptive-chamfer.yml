@@ -2,7 +2,7 @@ name: Cubie C0.5 validated adaptive physical chamfer rebuild
 on:
   push:
     branches: [codex/cubie-geometry-rebuild-20261101]
-    paths: [.github/workflows/cubie-adaptive-chamfer.yml]
+    paths: [.github/workflows/cubie-adaptive-chamfer.yml, tools/cubie_adaptive_chamfer.py]
 permissions:
   contents: read
   actions: read
@@ -12,12 +12,6 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch freshly verified baseline-derived front cut
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p /tmp/cubie_adaptive
-          gh run download 41343198810 --repo taavipihlakas-dev/Cubie --name cubie-original-only-front-cutter-inspection --dir /tmp/cubie_adaptive
       - name: Chamfer with per-region watertight and connected-body checks
         run: |
           python -m pip install --quiet numpy trimesh networkx manifold3d==3.5.4
