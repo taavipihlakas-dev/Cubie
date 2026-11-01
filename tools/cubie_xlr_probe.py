@@ -19,7 +19,7 @@ def cyl(x,y,r,zmin,zmax,n=256):
     return asman(m)
 
 X,Y=125.6,24.9
-dx,dy=0.5,-1.2
+dx,dy=0.4,-0.5
 old=asman(base)
 print("XLR_MANIFOLD_IN",old.status(),old.num_tri(),flush=True)
 # Close old Ø23.8-mm bore only in the 0..28 mm front/back aperture,
