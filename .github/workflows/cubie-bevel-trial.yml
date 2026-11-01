@@ -2,7 +2,7 @@ name: Cubie isolated C0.5 bevel experiment (NO PUBLICATION)
 on:
   push:
     branches: [codex/cubie-wave73-c05-surface-20261101]
-    paths: [.github/workflows/cubie-bevel-trial.yml]
+    paths: [.github/workflows/cubie-bevel-trial.yml, tools/cubie_bevel_probe.py]
 permissions:
   contents: read
   actions: read
@@ -38,6 +38,7 @@ jobs:
           assert abs(changed.volume-source.volume)<1000
           PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: cubie-bevel-c05-experimental
           path: /tmp/cubie_bevel/waveshare_73_beveled_probe.stl
