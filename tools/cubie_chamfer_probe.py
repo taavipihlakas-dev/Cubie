@@ -23,9 +23,9 @@ ylocal=np.cos(tilt)*relative[:,1]+np.sin(tilt)*relative[:,2]
 zlocal=-np.sin(tilt)*relative[:,1]+np.cos(tilt)*relative[:,2]
 rlocal=np.hypot(relative[:,0],ylocal)
 protected=(rlocal<37)&(rlocal>32)&(zlocal>-15)&(zlocal<15)
-chosen=np.where((angles>80)&(angles<100)&(lengths>=.5)&convex&~protected)[0]
+chosen=np.where((angles>70)&(angles<110)&(lengths>=.02)&convex&~protected)[0]
 print('CHAMFER CANDIDATE COUNT',len(chosen),flush=True)
-assert 500<len(chosen)<5000
+assert 3500<len(chosen)<10000
 def mm(mesh):
  return Manifold(Mesh(vert_properties=np.ascontiguousarray(mesh.vertices,dtype=np.float32),tri_verts=np.ascontiguousarray(mesh.faces,dtype=np.uint32)))
 cutters=[]
