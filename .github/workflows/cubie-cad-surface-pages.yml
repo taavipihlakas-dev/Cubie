@@ -1,0 +1,73 @@
+name: Publish CAD surface viewer separately (approved original preserved)
+on:
+  push:
+    branches: [codex/cubie-cad-surface-viewer-20261101]
+    paths: [.github/workflows/cubie-cad-surface-pages.yml]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  cad-viewer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: cubie-a7a-preview
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate immutable approved viewer and assemble CAD-only viewer
+        shell: bash
+        run: |
+          set -euo pipefail
+          ORIGINAL="Cubie_A7A_05mm_faasid_osaline_v01_osad_peidus.html"
+          ORIGINAL_SHA="056db2997d1056c3b68d7ad8beb7d9872dd47be79d18439f637749787c9d6501"
+          CAD_SHA="bc7c6d49e5ffbbc6319bfcbfc806692f48b8b29136816540dfa550e9f15d5112"
+          test "$(sha256sum "$ORIGINAL" | cut -d' ' -f1)" = "$ORIGINAL_SHA"
+          test "$(find cadparts -type f -name '*.txt' | wc -l | tr -d ' ')" = "13"
+          mkdir -p _site
+          cp "$ORIGINAL" _site/index.html
+          cp "$ORIGINAL" _site/v01.html
+          cat cadparts/{00..12}.txt > _site/cad-pinnad.html
+          test "$(sha256sum _site/cad-pinnad.html | cut -d' ' -f1)" = "$CAD_SHA"
+          python3 - <<'PY'
+          import re,subprocess
+          from pathlib import Path
+          s=Path('_site/cad-pinnad.html').read_text()
+          assert "CAD · 81 taastatud tasapinda" in s
+          assert "CAD · Waveshare" in s
+          assert "CAD · XLR 1" in s and "CAD · XLR 2" in s
+          assert "setCadView('cad')" in s
+          assert 'const geometry=' in s
+          for i,part in enumerate(re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S|re.I)):
+             f=Path('/tmp/cubie_script_%d.js'%i);f.write_text(part)
+             subprocess.run(['node','--check',str(f)],check=True)
+          print("VALIDATED CAD REFERENCE VIEWER")
+          PY
+          test "$(find _site -type f | wc -l | tr -d ' ')" = "3"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./_site
+      - uses: actions/deploy-pages@v4
+        id: deployment
+      - name: Confirm direct viewer link and approved homepage via SHA256
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://taavipihlakas-dev.github.io/Cubie"
+          EXPECTED="bc7c6d49e5ffbbc6319bfcbfc806692f48b8b29136816540dfa550e9f15d5112"
+          ORIGINAL="056db2997d1056c3b68d7ad8beb7d9872dd47be79d18439f637749787c9d6501"
+          for i in $(seq 1 25); do
+            if curl -fsSL --max-time 15 "$BASE/cad-pinnad.html" -o /tmp/cubie_cad_live.html &&
+               curl -fsSL --max-time 15 "$BASE/" -o /tmp/cubie_original_live.html &&
+               test "$(sha256sum /tmp/cubie_cad_live.html | cut -d' ' -f1)" = "$EXPECTED" &&
+               test "$(sha256sum /tmp/cubie_original_live.html | cut -d' ' -f1)" = "$ORIGINAL"; then
+              echo "LIVE CAD VIEWER VERIFIED $BASE/cad-pinnad.html"
+              echo "APPROVED ORIGINAL VERIFIED $BASE/"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "ERROR: live files not verified"
+          exit 1
