@@ -2,7 +2,7 @@ name: Build canonical Cubie CAD work solid (no model edits, no Pages)
 on:
   push:
     branches: [codex/cubie-cad-source-20261101]
-    paths: [.github/workflows/cubie-cad-source.yml]
+    paths: [.github/workflows/cubie-cad-source.yml, tools/loo_cad_kinnitatud_html_jaergi.py]
 permissions:
   contents: read
 jobs:
