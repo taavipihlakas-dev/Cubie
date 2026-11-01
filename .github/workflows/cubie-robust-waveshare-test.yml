@@ -93,6 +93,13 @@ jobs:
           print("OUTPUT CHECK",M.is_watertight,M.is_winding_consistent,len(M.vertices),len(M.faces),M.volume,flush=True)
           assert M.is_watertight and M.is_winding_consistent and M.volume>0
           # A single valid boolean is NOT completion of the owner’s entire requested repair.
+          M.export("waveshare_73_test.stl")
+          print("STL EXPORT: waveshare_73_test.stl",flush=True)
           print("GEOMETRY PARTIAL PASS: robust Ø73 ring cut completed; XLR and C0.5 still required. KEEP PAGES UNCHANGED.",flush=True)
           assert hashlib.sha256(BASE.read_bytes()).hexdigest()=="661666f196459ec15edce3b1fe39cd552ce4a25dd7212a606bf7cf77d3bdbe91"
           PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waveshare-73-test-geometry
+          path: waveshare_73_test.stl
+          if-no-files-found: error
