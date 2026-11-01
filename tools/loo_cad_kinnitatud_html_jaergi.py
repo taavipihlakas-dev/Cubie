@@ -47,7 +47,7 @@ def convert(original="Kohutavalt kaua ver.1.html",dest="Cubie_A7A_CAD_tooalus.br
                     if i not in vv:vv[i]=BRepBuilderAPI_MakeVertex(gp_Pnt(*map(float,verts[i]))).Vertex()
                 ee[key]=BRepBuilderAPI_MakeEdge(vv[key[0]],vv[key[1]]).Edge()
             e=ee[key]
-            oriented.append(e if a==key[0] else TopoDS.Edge_s(e.Reversed()))
+            oriented.append(e if a==key[0] else TopoDS.Edge(e.Reversed()))
         w=BRepBuilderAPI_MakeWire()
         for e in oriented:w.Add(e)
         assert w.IsDone(),n
