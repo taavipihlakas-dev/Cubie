@@ -2,7 +2,7 @@ name: Cubie XLR bore displacement diagnostic only (NO PUBLICATION)
 on:
   push:
     branches: [codex/cubie-wave73-c05-surface-20261101]
-    paths: [.github/workflows/cubie-xlr-trial.yml]
+    paths: [.github/workflows/cubie-xlr-trial.yml, tools/cubie_xlr_probe.py]
 permissions:
   contents: read
   actions: read
