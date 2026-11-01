@@ -19,12 +19,12 @@ bm.from_mesh(obj.data)
 bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=1e-5)
 bm.verts.ensure_lookup_table()
 bm.edges.ensure_lookup_table()
-sharp=[e for e in bm.edges if e.is_manifold and e.calc_face_angle(0)>math.radians(70)]
+sharp=[e for e in bm.edges if e.is_manifold and e.calc_face_angle(0)>math.radians(70) and e.calc_length()>=1.0]
 short=[e for e in sharp if e.calc_length()<1]
 print("BEVEL_INPUT",len(bm.verts),len(bm.faces),"sharp",len(sharp),"under1mm",len(short),flush=True)
 assert len(sharp)>200
 result=bmesh.ops.bevel(bm,geom=sharp,offset=.5,offset_type="OFFSET",segments=1,
-                       profile=0.5,affect="EDGES",clamp_overlap=True,
+                       profile=0.5,affect="EDGES",clamp_overlap=False,
                        loop_slide=True,miter_outer="SHARP",miter_inner="SHARP")
 print("BEVEL_RESULT",len(result["faces"]),len(bm.faces),len(bm.verts),flush=True)
 boundary=[e for e in bm.edges if not e.is_manifold]
