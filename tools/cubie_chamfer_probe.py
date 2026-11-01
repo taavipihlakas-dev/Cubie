@@ -14,9 +14,18 @@ mid=(v[edges[:,0]]+v[edges[:,1]])/2
 convex=np.einsum('ij,ij->i',norm[pair[:,0]],v[other]-mid)<-1e-5
 # Diagnostic controlled subset: long straight structural edges. Exclude the ring region.
 r=np.hypot(mid[:,0]-87.5,mid[:,1]-54)
-chosen=np.where((angles>80)&(angles<100)&(lengths>=2)&convex&(r>44))[0]
+# Detect all eligible high-angle, edge-length >=0.5 structural corners;
+# preserve the Ø71 ring and its adjacent unmodified lower arc.
+C=np.array([87.5,54,-1.4779667096744553])
+tilt=np.deg2rad(16)
+relative=mid-C
+ylocal=np.cos(tilt)*relative[:,1]+np.sin(tilt)*relative[:,2]
+zlocal=-np.sin(tilt)*relative[:,1]+np.cos(tilt)*relative[:,2]
+rlocal=np.hypot(relative[:,0],ylocal)
+protected=(rlocal<37)&(rlocal>32)&(zlocal>-15)&(zlocal<15)
+chosen=np.where((angles>80)&(angles<100)&(lengths>=.5)&convex&~protected)[0]
 print('CHAMFER CANDIDATE COUNT',len(chosen),flush=True)
-assert 5<len(chosen)<500
+assert 500<len(chosen)<5000
 def mm(mesh):
  return Manifold(Mesh(vert_properties=np.ascontiguousarray(mesh.vertices,dtype=np.float32),tri_verts=np.ascontiguousarray(mesh.faces,dtype=np.uint32)))
 cutters=[]
