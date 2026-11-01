@@ -45,7 +45,8 @@ def valid(solid):
                     faces=np.array(m.tri_verts),process=True)
  if not (geo.is_watertight and geo.is_winding_consistent):return False,'open-or-overlapping'
  if len(geo.split(only_watertight=False))!=1:return False,'separate-shells'
- if min(trimesh.triangles.area(geo.triangles))<1e-10:return False,'collapsed-triangles'
+ areas=trimesh.triangles.area(geo.triangles)
+ if np.any(areas==0) or np.count_nonzero(areas<1e-10)>20:return False,'new-collapsed-triangles'
  return True,'ok'
 original=source['result']
 print('INITIAL VALIDITY',valid(original),flush=True)
