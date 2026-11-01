@@ -1,0 +1,30 @@
+name: Cubie XLR bore displacement diagnostic only (NO PUBLICATION)
+on:
+  push:
+    branches: [codex/cubie-wave73-c05-surface-20261101]
+    paths: [.github/workflows/cubie-xlr-trial.yml, tools/cubie_xlr_probe.py]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  xlr-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch verified Waveshare ring-corrected model
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/cubie_xlr
+          gh run download 41334443383 --repo taavipihlakas-dev/Cubie --name waveshare-73-test-geometry --dir /tmp/cubie_xlr
+      - name: Try XLR-only displacement without touching source or Pages
+        run: |
+          python -m pip install --quiet numpy scipy trimesh manifold3d==3.5.4
+          python -u tools/cubie_xlr_probe.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cubie-xlr-hole-shift-diagnostic
+          path: /tmp/cubie_xlr/xlr_shift_probe.stl
+          if-no-files-found: warn

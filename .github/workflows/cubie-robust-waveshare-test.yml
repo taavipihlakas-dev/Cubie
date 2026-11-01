@@ -1,0 +1,121 @@
+name: Cubie A7A robust Waveshare ring mesh trial (NO PUBLICATION)
+on:
+  push:
+    branches: [codex/cubie-wave73-c05-surface-20261101]
+    paths: [.github/workflows/cubie-robust-waveshare-test.yml]
+permissions:
+  contents: read
+jobs:
+  manifold-trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install alternate reliable manifold Boolean backend
+        run: |
+          python -m pip install --disable-pip-version-check --quiet numpy==2.2.6 trimesh==4.8.3 manifold3d==3.5.4
+      - name: Check baseline, try isolated upper ring cut, reject any nonwatertight output
+        shell: bash
+        run: |
+          python -u <<'PY'
+          import json, base64, hashlib, sys, time
+          import numpy as np, trimesh, manifold3d
+          from pathlib import Path
+          BASE=Path("Kohutavalt kaua ver.1.html")
+          b=BASE.read_bytes()
+          assert len(b)==5527796 and hashlib.sha256(b).hexdigest()=="661666f196459ec15edce3b1fe39cd552ce4a25dd7212a606bf7cf77d3bdbe91"
+          s=b.decode("utf8")
+          off=s.index("const geometry=")+len("const geometry=")
+          entries,_=json.JSONDecoder().raw_decode(s[off:])
+          original=entries[0]
+          assert original["encoding"]=="float32-mm" and original["triangles"]==71880
+          raw=np.frombuffer(base64.b64decode(original["q"]),dtype="<f4").copy().reshape(-1,3)
+          base=trimesh.Trimesh(vertices=raw,faces=np.arange(len(raw)).reshape(-1,3),process=True,validate=False)
+          print("BASE",len(base.vertices),len(base.faces),base.is_watertight,base.is_winding_consistent,base.volume,flush=True)
+          assert base.is_watertight and base.is_winding_consistent and base.volume>0
+          v=np.array(base.vertices,dtype=np.float32,copy=True)
+          degenerate=trimesh.triangles.area(v[base.faces])<1e-12
+          print("DEGENERATE",int(degenerate.sum()),flush=True)
+          # Prior analysis located this single collapsed face; alter one point ONLY in temporary work copy.
+          assert degenerate.sum()<=2
+          v[17043] += np.array([0,-.9612618,-.2756371],dtype=np.float32)*.001
+          cleaned=trimesh.Trimesh(vertices=v,faces=base.faces,process=False)
+          print("REPAIRED",cleaned.is_watertight,cleaned.is_winding_consistent,cleaned.volume,
+            "zero areas",int((trimesh.triangles.area(v[base.faces])<1e-12).sum()),flush=True)
+          assert cleaned.is_watertight and cleaned.is_winding_consistent
+          from manifold3d import Mesh,Manifold
+          mm=Manifold(Mesh(vert_properties=np.ascontiguousarray(v,dtype=np.float32),
+                           tri_verts=np.ascontiguousarray(base.faces,dtype=np.uint32)))
+          print("MANIFOLD INPUT",mm.status(),mm.num_tri(),mm.volume(),flush=True)
+          assert mm.num_tri()>70000 and abs(mm.volume()-base.volume)<5
+          # Upper semicircular annulus, radius 35.50001 to 36.5,
+          # local z from just below ring bottom to front face (long cutter).
+          # Using fixed ring axis measured from the immutable baseline.
+          n=256
+          t=np.linspace(-.0001,np.pi+.0001,n+1)
+          z0,z1=-.001,60.
+          r0,r1=35.50001,36.5
+          center=np.array([87.5,54,-1.4779667096744553])
+          angle=np.deg2rad(16)
+          ax=np.array([1.,0,0]);ay=np.array([0,np.cos(angle),np.sin(angle)]);az=np.cross(ax,ay)
+          verts=np.array([center+az*z+r*(ax*np.cos(theta)+ay*np.sin(theta))
+              for z in (z0,z1) for r in (r0,r1) for theta in t],dtype=np.float64)
+          def idx(k,j,i):return (k*2+j)*(n+1)+i
+          ff=[]
+          for j in range(2):
+            for i in range(n):
+              a,b,c,d=idx(0,j,i),idx(0,j,i+1),idx(1,j,i+1),idx(1,j,i)
+              if j==1:ff.extend([(a,b,c),(a,c,d)])
+              else:ff.extend([(a,c,b),(a,d,c)])
+          for k in range(2):
+            for i in range(n):
+              a,b,c,d=idx(k,0,i),idx(k,1,i),idx(k,1,i+1),idx(k,0,i+1)
+              if k==1:ff.extend([(a,b,c),(a,c,d)])
+              else:ff.extend([(a,c,b),(a,d,c)])
+          for i in (0,n):
+            a,b,c,d=idx(0,0,i),idx(0,1,i),idx(1,1,i),idx(1,0,i)
+            if i==n:ff.extend([(a,c,b),(a,d,c)])
+            else:ff.extend([(a,b,c),(a,c,d)])
+          tool=trimesh.Trimesh(vertices=verts,faces=np.array(ff),process=False)
+          if tool.volume<0:tool.invert()
+          print("CUTTER",tool.is_watertight,tool.is_winding_consistent,tool.volume,tool.bounds,flush=True)
+          assert tool.is_watertight and tool.is_winding_consistent and tool.volume>0
+          cutter=Manifold(Mesh(vert_properties=np.ascontiguousarray(tool.vertices,dtype=np.float32),
+                               tri_verts=np.ascontiguousarray(tool.faces,dtype=np.uint32)))
+          print("MANIFOLD CUTTER",cutter.status(),cutter.num_tri(),cutter.volume(),flush=True)
+          assert cutter.num_tri()>500 and cutter.volume()>50
+          t0=time.monotonic()
+          out=mm-cutter
+          print("RESULT",out.status(),out.num_tri(),out.volume(),"sec",time.monotonic()-t0,flush=True)
+          assert out.num_tri()>70000 and out.volume()>0 and out.volume()<mm.volume()-1.0
+          mesh=out.to_mesh()
+          M=trimesh.Trimesh(vertices=np.asarray(mesh.vert_properties)[:,:3],faces=np.asarray(mesh.tri_verts),process=False)
+          print("OUTPUT CHECK",M.is_watertight,M.is_winding_consistent,len(M.vertices),len(M.faces),M.volume,flush=True)
+          assert M.is_watertight and M.is_winding_consistent and M.volume>0
+          # A single valid boolean is NOT completion of the owner’s entire requested repair.
+          # Only remove artifacts smaller than 0.04 mm. This is a separate diagnostic, not a verified chamfer.
+          reduced=out.simplify(0.04)
+          reduced_mesh=reduced.to_mesh()
+          reduced_tri=trimesh.Trimesh(vertices=np.asarray(reduced_mesh.vert_properties)[:,:3],
+                                     faces=np.asarray(reduced_mesh.tri_verts),process=False)
+          print("SIMPLIFIED 0.04",reduced.status(),len(reduced_tri.faces),reduced_tri.is_watertight,
+                reduced_tri.is_winding_consistent,reduced_tri.volume,flush=True)
+          assert reduced_tri.is_watertight and reduced_tri.is_winding_consistent
+          adj=np.degrees(reduced_tri.face_adjacency_angles)
+          sharp=reduced_tri.face_adjacency_edges[adj>70]
+          lengths=np.linalg.norm(reduced_tri.vertices[sharp[:,0]]-reduced_tri.vertices[sharp[:,1]],axis=1)
+          print("SIMPLIFIED SHARP EDGES",len(sharp),"under1mm",int(sum(lengths<1)),
+                "over1mm",int(sum(lengths>=1)),flush=True)
+          reduced_tri.export("waveshare_73_simplified_probe.stl")
+          M.export("waveshare_73_test.stl")
+          print("STL EXPORT: waveshare_73_test.stl",flush=True)
+          print("GEOMETRY PARTIAL PASS: robust Ø73 ring cut completed; XLR and C0.5 still required. KEEP PAGES UNCHANGED.",flush=True)
+          assert hashlib.sha256(BASE.read_bytes()).hexdigest()=="661666f196459ec15edce3b1fe39cd552ce4a25dd7212a606bf7cf77d3bdbe91"
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: waveshare-73-test-geometry
+          path: |
+            waveshare_73_test.stl
+            waveshare_73_simplified_probe.stl
+          if-no-files-found: error

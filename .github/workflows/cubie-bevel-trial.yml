@@ -1,0 +1,45 @@
+name: Cubie isolated C0.5 bevel experiment (NO PUBLICATION)
+on:
+  push:
+    branches: [codex/cubie-wave73-c05-surface-20261101]
+    paths: [.github/workflows/cubie-bevel-trial.yml, tools/cubie_bevel_probe.py]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  bevel-trial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve validated isolated Waveshare solid
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/cubie_bevel
+          gh run download 41334443383 --repo taavipihlakas-dev/Cubie --name waveshare-73-test-geometry --dir /tmp/cubie_bevel
+          ls -lh /tmp/cubie_bevel
+      - name: Install Blender and mesh checks
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender
+          python -m pip install --quiet numpy trimesh
+          blender --version | head -3
+      - name: Apply C0.5 only on actual structural edges
+        run: |
+          blender --background --factory-startup --python tools/cubie_bevel_probe.py
+          python - <<'PY'
+          import trimesh, numpy as np
+          source=trimesh.load('/tmp/cubie_bevel/waveshare_73_simplified_probe.stl',process=True)
+          changed=trimesh.load('/tmp/cubie_bevel/waveshare_73_beveled_probe.stl',process=True)
+          print("BEVEL_VALIDATION",changed.is_watertight,changed.is_winding_consistent,len(changed.faces),changed.volume,flush=True)
+          print("BEVEL_VOLUME_DELTA",changed.volume-source.volume,flush=True)
+          assert changed.is_watertight and changed.is_winding_consistent and changed.volume>0
+          assert abs(changed.volume-source.volume)<1000
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cubie-bevel-c05-experimental
+          path: /tmp/cubie_bevel/waveshare_73_beveled_probe.stl
+          if-no-files-found: error
