@@ -93,6 +93,20 @@ jobs:
           print("OUTPUT CHECK",M.is_watertight,M.is_winding_consistent,len(M.vertices),len(M.faces),M.volume,flush=True)
           assert M.is_watertight and M.is_winding_consistent and M.volume>0
           # A single valid boolean is NOT completion of the owner’s entire requested repair.
+          # Only remove artifacts smaller than 0.04 mm. This is a separate diagnostic, not a verified chamfer.
+          reduced=out.simplify(0.04)
+          reduced_mesh=reduced.to_mesh()
+          reduced_tri=trimesh.Trimesh(vertices=np.asarray(reduced_mesh.vert_properties)[:,:3],
+                                     faces=np.asarray(reduced_mesh.tri_verts),process=False)
+          print("SIMPLIFIED 0.04",reduced.status(),len(reduced_tri.faces),reduced_tri.is_watertight,
+                reduced_tri.is_winding_consistent,reduced_tri.volume,flush=True)
+          assert reduced_tri.is_watertight and reduced_tri.is_winding_consistent
+          adj=np.degrees(reduced_tri.face_adjacency_angles)
+          sharp=reduced_tri.face_adjacency_edges[adj>70]
+          lengths=np.linalg.norm(reduced_tri.vertices[sharp[:,0]]-reduced_tri.vertices[sharp[:,1]],axis=1)
+          print("SIMPLIFIED SHARP EDGES",len(sharp),"under1mm",int(sum(lengths<1)),
+                "over1mm",int(sum(lengths>=1)),flush=True)
+          reduced_tri.export("waveshare_73_simplified_probe.stl")
           M.export("waveshare_73_test.stl")
           print("STL EXPORT: waveshare_73_test.stl",flush=True)
           print("GEOMETRY PARTIAL PASS: robust Ø73 ring cut completed; XLR and C0.5 still required. KEEP PAGES UNCHANGED.",flush=True)
@@ -101,5 +115,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: waveshare-73-test-geometry
-          path: waveshare_73_test.stl
+          path: |
+            waveshare_73_test.stl
+            waveshare_73_simplified_probe.stl
           if-no-files-found: error
