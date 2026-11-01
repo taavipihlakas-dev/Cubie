@@ -59,5 +59,10 @@ cyl=trimesh.creation.cylinder(radius=11.9,height=30.0,sections=320)
 cyl.apply_translation([125.6,24.9,14.9])
 probe=solid-manifold(cyl)
 print('XLR BORE PROBE SOLID REMOVAL',solid.volume()-probe.volume(),flush=True)
+for radius in (11.5,11.8,11.88):
+ cylinder=trimesh.creation.cylinder(radius=radius,height=27.2,sections=320)
+ cylinder.apply_translation([125.6,24.9,13.75])
+ delta=solid.volume()-(solid-manifold(cylinder)).volume()
+ print('XLR INTERIOR',radius,'mm, removed',delta,'mm3',flush=True)
 out.export('cubie_fresh_ws73_front.stl')
 assert hashlib.sha256(BASE.read_bytes()).hexdigest()==SHA
