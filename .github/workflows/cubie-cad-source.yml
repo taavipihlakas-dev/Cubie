@@ -1,0 +1,27 @@
+name: Build canonical Cubie CAD work solid (no model edits, no Pages)
+on:
+  push:
+    branches: [codex/cubie-cad-source-20261101]
+    paths: [.github/workflows/cubie-cad-source.yml]
+permissions:
+  contents: read
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the CAD conversion engine
+        run: python -m pip install --quiet numpy trimesh cadquery-ocp
+      - name: Rebuild CAD from exact locked source, never edit HTML
+        run: |
+          set -euo pipefail
+          test "$(sha256sum 'Kohutavalt kaua ver.1.html' | cut -d' ' -f1)" = "661666f196459ec15edce3b1fe39cd552ce4a25dd7212a606bf7cf77d3bdbe91"
+          python -u tools/loo_cad_kinnitatud_html_jaergi.py
+          test -s Cubie_A7A_CAD_tooalus.brep
+          test "$(sha256sum 'Kohutavalt kaua ver.1.html' | cut -d' ' -f1)" = "661666f196459ec15edce3b1fe39cd552ce4a25dd7212a606bf7cf77d3bdbe91"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cubie-canonical-solid-cad-brep
+          path: Cubie_A7A_CAD_tooalus.brep
+          if-no-files-found: error
