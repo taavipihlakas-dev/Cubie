@@ -1,0 +1,22 @@
+name: Cubie rebuild from locked baseline - geometry diagnostic
+on:
+  push:
+    branches: [codex/cubie-geometry-rebuild-20261101]
+    paths: [.github/workflows/cubie-rebuild-front.yml]
+permissions:
+  contents: read
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate correct front-side clearance from locked baseline ONLY
+        run: |
+          python -m pip install --quiet numpy trimesh manifold3d==3.5.4
+          python -u tools/cubie_rebuild_front.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cubie-original-only-front-cutter-inspection
+          path: cubie_fresh_ws73_front.stl
+          if-no-files-found: error
