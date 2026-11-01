@@ -2,7 +2,7 @@ name: Cubie C0.5 concave edge physical addition probe - no publishing
 on:
   push:
     branches: [codex/cubie-geometry-rebuild-20261101]
-    paths: [.github/workflows/cubie-concave-probe.yml]
+    paths: [.github/workflows/cubie-concave-probe.yml, tools/cubie_concave_probe.py]
 permissions:
   contents: read
   actions: read
