@@ -1,7 +1,9 @@
 """Safely apply physical C0.5 chamfers to approved source; reject local cuts that corrupt serialized geometry."""
 import numpy as np,trimesh,time
 from manifold3d import Manifold,Mesh,OpType
-M=trimesh.load('/tmp/cubie_adaptive/cubie_fresh_ws73_front.stl',process=True)
+import runpy
+source=runpy.run_path('tools/cubie_rebuild_front.py')
+M=source['out']
 assert M.is_watertight and M.is_winding_consistent and len(M.split(only_watertight=False))==1
 v=M.vertices;f=M.faces;e=M.face_adjacency_edges;p=M.face_adjacency
 angs=np.rad2deg(M.face_adjacency_angles);lens=np.linalg.norm(v[e[:,1]]-v[e[:,0]],axis=1)
@@ -45,7 +47,8 @@ def valid(solid):
  if len(geo.split(only_watertight=False))!=1:return False,'separate-shells'
  if min(trimesh.triangles.area(geo.triangles))<1e-10:return False,'collapsed-triangles'
  return True,'ok'
-original=manifold(M)
+original=source['result']
+print('INITIAL VALIDITY',valid(original),flush=True)
 assert valid(original)[0]
 # Group geometrically nearby edges to avoid arbitrary nondeterministic fit.
 cutters.sort(key=lambda t:(int(mid[t[0],0]/12),int(mid[t[0],1]/12),int(mid[t[0],2]/12),float(mid[t[0],0]),float(mid[t[0],1])))
