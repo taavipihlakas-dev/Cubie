@@ -1,0 +1,53 @@
+name: Restore approved Cubie working Pages (no rejected candidate)
+on:
+  push:
+    branches: [codex/cubie-pages-preview-20261030]
+    paths: [.github/workflows/cubie-restore-working-pages.yml]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    environment:
+      name: cubie-a7a-preview
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stage exactly the prior working viewer, no other model
+        run: |
+          set -euo pipefail
+          FILE="Cubie_A7A_05mm_faasid_osaline_v01_osad_peidus.html"
+          SHA="056db2997d1056c3b68d7ad8beb7d9872dd47be79d18439f637749787c9d6501"
+          test "$(sha256sum "$FILE" | cut -d' ' -f1)" = "$SHA"
+          test "$(wc -c < "$FILE" | tr -d ' ')" = "5528023"
+          mkdir -p _site
+          cp "$FILE" _site/index.html
+          cp "$FILE" _site/v01.html
+          test "$(find _site -type f | wc -l | tr -d ' ')" = "2"
+          test "$(sha256sum _site/index.html | cut -d' ' -f1)" = "$SHA"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./_site
+      - uses: actions/deploy-pages@v4
+        id: deployment
+      - name: Verify restored live viewer and removed rejected URL
+        run: |
+          set -euo pipefail
+          EXPECTED="056db2997d1056c3b68d7ad8beb7d9872dd47be79d18439f637749787c9d6501"
+          ROOT="https://taavipihlakas-dev.github.io/Cubie"
+          for i in $(seq 1 25); do
+            GOT="$(curl --location --fail --silent --show-error --max-time 15 "$ROOT/" | sha256sum | cut -d' ' -f1 || true)"
+            CODE="$(curl --location --silent --output /dev/null --write-out '%{http_code}' --max-time 15 "$ROOT/v02.html" || true)"
+            if test "$GOT" = "$EXPECTED" && test "$CODE" = "404"; then
+              echo "RESTORED: $ROOT/ sha256=$GOT"
+              echo "REJECTED_PAGE_REMOVED: HTTP $CODE"
+              exit 0
+            fi
+            echo "Checking Pages propagation: home_sha=$GOT, removed_page_http=$CODE"
+            sleep 2
+          done
+          echo "FAIL: verification of restored Pages and rejected URL removal"
+          exit 1
