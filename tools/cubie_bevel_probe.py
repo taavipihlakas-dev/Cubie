@@ -24,7 +24,7 @@ short=[e for e in sharp if e.calc_length()<1]
 print("BEVEL_INPUT",len(bm.verts),len(bm.faces),"sharp",len(sharp),"under1mm",len(short),flush=True)
 assert len(sharp)>200
 result=bmesh.ops.bevel(bm,geom=sharp,offset=.5,offset_type="OFFSET",segments=1,
-                       profile=0.5,affect="EDGES",clamp_overlap=False,
+                       profile=0.5,affect="EDGES",clamp_overlap=True,
                        loop_slide=True,miter_outer="SHARP",miter_inner="SHARP")
 print("BEVEL_RESULT",len(result["faces"]),len(bm.faces),len(bm.verts),flush=True)
 boundary=[e for e in bm.edges if not e.is_manifold]
