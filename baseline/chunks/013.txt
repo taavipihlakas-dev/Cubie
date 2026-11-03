@@ -1,0 +1,47 @@
+l();}else ctx.stroke();
+    }
+  }
+  function stop(){drawing=false;current=null;}
+  overlay.addEventListener('pointerdown',e=>{
+    if(!overlay.classList.contains('drawing'))return;
+    e.preventDefault();overlay.setPointerCapture(e.pointerId);current=[point(e)];strokes.push(current);drawing=true;repaint();
+  });
+  overlay.addEventListener('pointermove',e=>{if(!drawing||!current)return;e.preventDefault();current.push(point(e));repaint();});
+  overlay.addEventListener('pointerup',stop);overlay.addEventListener('pointercancel',stop);
+  pen.addEventListener('click',()=>{
+    const enabled=pen.getAttribute('aria-pressed')!=='true';
+    pen.setAttribute('aria-pressed',String(enabled));overlay.classList.toggle('drawing',enabled);
+    clear.hidden=!enabled;pen.textContent=enabled?'✎ Valmis':'✎ Pliiats';stop();
+  });
+  clear.addEventListener('click',()=>{strokes.length=0;stop();repaint();});
+  function capture(){
+    resize();
+    const out=document.createElement('canvas');out.width=view.width;out.height=view.height;
+    const c=out.getContext('2d',{alpha:false});
+    c.drawImage(view,0,0,out.width,out.height);
+    c.drawImage(labels,0,0,out.width,out.height);
+    c.drawImage(overlay,0,0,out.width,out.height);
+    return out;
+  }
+  function pngFile(out){
+    const data=atob(out.toDataURL('image/png').split(',')[1]);
+    const bytes=new Uint8Array(data.length);for(let i=0;i<data.length;i++)bytes[i]=data.charCodeAt(i);
+    return new File([bytes],'Cubie_A7A_joonistus_'+new Date().toISOString().replace(/[:.]/g,'-')+'.png',{type:'image/png'});
+  }
+  function download(file){const a=document.createElement('a');a.href=URL.createObjectURL(file);a.download=file.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),12000);}
+  photo.addEventListener('click',()=>{
+    try{
+      // Everything before navigator.share is synchronous to keep Android user activation.
+      const file=pngFile(capture());
+      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+        navigator.share({files:[file],title:'Cubie A7A – märgistatud foto'})
+          .then(()=>notify('Jagamine lõpetatud. Vestlusesse jõudmist ei saa vaaturist kontrollida.'))
+          .catch(e=>{if(e.name!=='AbortError'){download(file);notify('Jagamine ebaõnnestus; PNG salvestati. Lisa see vestlusesse.');}});
+      } else {download(file);notify('PNG salvestati. Brauser ei saa seda otse vestlusse saata; lisa pilt siia.');}
+    }catch(e){notify('Foto tegemine ebaõnnestus: '+String(e.message||e));}
+  });
+  window.addEventListener('resize',resize);resize();
+})();
+</script>
+</body>
+</html>
